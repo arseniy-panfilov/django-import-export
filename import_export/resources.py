@@ -442,8 +442,11 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
                 if self.skip_row(instance, original):
                     row_result.import_type = RowResult.IMPORT_TYPE_SKIP
                 else:
-                    with transaction.atomic():
+                    if dry_run:
                         self.save_instance(instance, dry_run)
+                    else:
+                        with transaction.atomic():
+                            self.save_instance(instance, dry_run)
                     self.save_m2m(instance, row, dry_run)
                     # Add object info to RowResult for LogEntry
                     row_result.object_repr = force_text(instance)
