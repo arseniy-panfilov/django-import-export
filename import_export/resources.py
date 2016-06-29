@@ -5,7 +5,7 @@ import functools
 import sys
 import tablib
 import traceback
-from copy import deepcopy
+from copy import copy
 
 from diff_match_patch import diff_match_patch
 
@@ -425,8 +425,9 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
             else:
                 row_result.import_type = RowResult.IMPORT_TYPE_UPDATE
             row_result.new_record = new
-            original = deepcopy(instance)
-            original_fields = [self.export_field(f, original) if original else "" for f in self.get_user_visible_fields()]
+            original = copy(instance)
+            visible_fields = self.get_user_visible_fields()
+            original_fields = [self.export_field(f, original) if original else "" for f in visible_fields]
             if self.for_delete(row, instance):
                 if new:
                     row_result.import_type = RowResult.IMPORT_TYPE_SKIP
@@ -449,7 +450,8 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
                     # Add object info to RowResult for LogEntry
                     row_result.object_repr = force_text(instance)
                     row_result.object_id = instance.pk
-                instance_fields = [self.export_field(f, instance) if instance else "" for f in self.get_user_visible_fields()]
+
+                instance_fields = [self.export_field_for_diff(f, instance, row) if instance else "" for f in visible_fields]
                 row_result.diff = self.get_diff(original_fields, new, instance_fields, dry_run)
             self.after_import_row(row, row_result, **kwargs)
         except Exception as e:
@@ -564,6 +566,12 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
         Override to add additional logic. Does nothing by default.
         """
         pass
+
+    def export_field_for_diff(self, field, obj, row):
+        if isinstance(field.widget, widgets.ManyToManyWidget):
+            return field.widget.render(field.clean(row))
+        else:
+            return self.export_field(field, obj)
 
     def export_field(self, field, obj):
         field_name = self.get_field_name(field)
