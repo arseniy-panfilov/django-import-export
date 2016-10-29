@@ -5,7 +5,7 @@ import functools
 import sys
 import tablib
 import traceback
-from copy import copy
+from copy import deepcopy
 
 from diff_match_patch import diff_match_patch
 
@@ -425,7 +425,7 @@ class Resource(six.with_metaclass(DeclarativeMetaclass)):
             else:
                 row_result.import_type = RowResult.IMPORT_TYPE_UPDATE
             row_result.new_record = new
-            original = copy(instance)
+            original = deepcopy(instance)
             visible_fields = self.get_user_visible_fields()
             original_fields = [self.export_field(f, original) if original else "" for f in visible_fields]
             if self.for_delete(row, instance):
